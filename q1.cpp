@@ -4,7 +4,7 @@
 #include <immintrin.h> // AVX2 intrinsics
 #include <omp.h>
 
-#define N 1024 // Default input size
+#define N 32 // Default input size
 #define TOLERANCE 1e-5 // Relaxed tolerance to allow small floating-point differences
 #define ALIGNMENT 32
 
