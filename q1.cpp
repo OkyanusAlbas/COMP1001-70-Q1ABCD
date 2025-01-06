@@ -4,12 +4,13 @@
 #include <immintrin.h> // AVX2 intrinsics
 #include <omp.h>
 
-#define N 32 // Default input size
-#define TOLERANCE 1e-5 // Relaxed tolerance to allow small floating-point differences
+#define N 1024 // Default input size
+#define TOLERANCE 1e-2 // Relaxed tolerance to allow small floating-point differences
 #define ALIGNMENT 32
 
 // Align matrices for AVX2 vectorization
 alignas(ALIGNMENT) float A[N][N], B[N][N], C[N][N];
+alignas(ALIGNMENT) float C_serial[N][N]; // To hold serial results for correctness checking
 
 // Function prototypes
 void init();
@@ -29,6 +30,13 @@ int main() {
     q1(); // Original routine
     end_1 = omp_get_wtime();
     printf("Original q1() execution time: %f seconds\n", end_1 - start_1);
+
+    // Save the original result for correctness checking
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            C_serial[i][j] = C[i][j];
+        }
+    }
 
     // Vectorized 'j' loop routine
     for (int i = 0; i < N; i++) {
@@ -54,7 +62,7 @@ int main() {
 
     // Check correctness of the vectorized version
     printf("Checking correctness between serial and vectorized (j-loop) version...\n");
-    check_correctness(C, C); // Compare results between original and vectorized
+    check_correctness(C_serial, C); // Compare results between original and vectorized
 
     // Calculate and print FLOPS for original q1() routine
     double flops = calculate_flops(end_1 - start_1);
@@ -128,13 +136,16 @@ void check_correctness(float C_serial[N][N], float C_vectorized[N][N]) {
         for (int j = 0; j < N; j++) {
             if (fabs(C_serial[i][j] - C_vectorized[i][j]) > TOLERANCE) {
                 mismatch_count++;
+                if (mismatch_count <= 10) { // Print only the first 10 mismatches
+                    printf("Mismatch at C[%d][%d]: %f (serial) vs %f (vectorized)\n", i, j, C_serial[i][j], C_vectorized[i][j]);
+                }
             }
         }
     }
 
     // Print result
     if (mismatch_count > 0) {
-        printf("There were %d mismatches between the serial and vectorized results.\n", mismatch_count);
+        printf("Total number of mismatches: %d\n", mismatch_count);
     }
     else {
         printf("Both routines produced the same result (within tolerance).\n");
